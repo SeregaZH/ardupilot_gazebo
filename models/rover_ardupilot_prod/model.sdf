@@ -87,7 +87,7 @@
     </joint>
 
     <plugin name="ArduCopter_Plugin" filename="libArduPilotPlugin.so">
-      <fdm_addr>127.0.0.1</fdm_addr>
+      <fdm_addr>localhost</fdm_addr>
       <fdm_port_in>9012</fdm_port_in>
       <fdm_port_out>9013</fdm_port_out>
       <!--
