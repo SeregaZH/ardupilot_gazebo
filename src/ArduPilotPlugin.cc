@@ -332,6 +332,26 @@ class gazebo::ArduPilotSocketPrivate
   public: void MakeSockAddr(const char *_address, const uint16_t _port,
     struct sockaddr_in &_sockaddr)
   {
+    const char* resolved_address = _address;
+    struct addrinfo hint = {0};
+    hint.ai_flags = AI_NUMERICHOST;
+    hint.ai_family = AF_UNSPEC;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_protocol = IPPROTO_TCP;
+
+    struct addrinfo *addrs = NULL;
+    int ret = getaddrinfo(_address, NULL, &hint, &addrs);
+    if (ret == EAI_NONAME)
+    {
+        hint.ai_flags = 0;
+        ret = getaddrinfo(_address, NULL, &hint, &addrs);
+    }
+
+    if(ret == 0) 
+    {
+        resolved_address = inet_ntoa(((sockaddr_in *) addrs -> ai_addr) -> sin_addr);
+    }
+
     memset(&_sockaddr, 0, sizeof(_sockaddr));
 
     #ifdef HAVE_SOCK_SIN_LEN
@@ -340,7 +360,7 @@ class gazebo::ArduPilotSocketPrivate
 
     _sockaddr.sin_port = htons(_port);
     _sockaddr.sin_family = AF_INET;
-    _sockaddr.sin_addr.s_addr = inet_addr(_address);
+    _sockaddr.sin_addr.s_addr = inet_addr(resolved_address);
   }
 
   public: ssize_t Send(const void *_buf, size_t _size)
