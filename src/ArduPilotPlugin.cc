@@ -352,6 +352,9 @@ class gazebo::ArduPilotSocketPrivate
         resolved_address = inet_ntoa(((sockaddr_in *) addrs -> ai_addr) -> sin_addr);
     }
 
+    gzdbg << "Original socket address: " << _address << "\n" << "Resolved socket address:" << resolved_address << "\n";
+    gzmsg << "Original socket address: " << _address << "\n" << "Resolved socket address:" << resolved_address << "\n";
+
     memset(&_sockaddr, 0, sizeof(_sockaddr));
 
     #ifdef HAVE_SOCK_SIN_LEN
