@@ -297,11 +297,13 @@ class gazebo::ArduPilotSocketPrivate
   /// \return True on success.
   public : bool Connect(const char *_address, const uint16_t _port)
   {
+    gzmsg << "Initiate connection to " << _address << "\n";
     struct sockaddr_in sockaddr;
     this->MakeSockAddr(_address, _port, sockaddr);
 
     if (connect(this->fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) != 0)
     {
+      gzerr << "Connection to " << _address << "failed due to unexpected error\n";
       shutdown(this->fd, 0);
       #ifdef _WIN32
       closesocket(this->fd);
@@ -1013,6 +1015,13 @@ bool ArduPilotPlugin::InitArduPilotSockets(sdf::ElementPtr _sdf) const
           << ":" << this->dataPtr->fdm_port_in << " aborting plugin.\n";
     return false;
   }
+  else
+  {
+    gzmsg << "[" << this->dataPtr->modelName << "] "
+          << "success to bind with " << this->dataPtr->listen_addr
+          << ":" << this->dataPtr->fdm_port_in << " continue.\n"; 
+  }
+  
 
   if (!this->dataPtr->socket_out.Connect(this->dataPtr->fdm_addr.c_str(),
       this->dataPtr->fdm_port_out))
@@ -1021,6 +1030,12 @@ bool ArduPilotPlugin::InitArduPilotSockets(sdf::ElementPtr _sdf) const
           << "failed to bind with " << this->dataPtr->fdm_addr
           << ":" << this->dataPtr->fdm_port_out << " aborting plugin.\n";
     return false;
+  }
+  else 
+  {
+    gzmsg << "[" << this->dataPtr->modelName << "] "
+          << "success to bind with " << this->dataPtr->fdm_addr
+          << ":" << this->dataPtr->fdm_port_out << " continue.\n";
   }
 
   return true;
