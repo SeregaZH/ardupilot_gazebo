@@ -477,6 +477,7 @@ ArduPilotPlugin::~ArduPilotPlugin()
 /////////////////////////////////////////////////
 void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
+  gzmsg << "Load ArduPilotPlugin plugin \n";
   GZ_ASSERT(_model, "ArduPilotPlugin _model pointer is null");
   GZ_ASSERT(_sdf, "ArduPilotPlugin _sdf pointer is null");
 
