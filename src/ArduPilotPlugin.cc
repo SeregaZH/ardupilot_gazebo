@@ -331,6 +331,9 @@ class gazebo::ArduPilotSocketPrivate
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_protocol = IPPROTO_TCP;
 
+    gzdbg << "Resolving address: " << _address << "\n";
+    gzmsg << "Resolving address: " << _address << "\n";
+
     struct addrinfo *addrs = NULL;
     int ret = getaddrinfo(_address, NULL, &hint, &addrs);
     if (ret == EAI_NONAME)
