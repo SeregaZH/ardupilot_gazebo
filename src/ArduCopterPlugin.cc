@@ -373,7 +373,7 @@ void ArduCopterPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
         rotor.id = this->dataPtr->rotors.size();
         gzwarn << "id attribute not specified, use order parsed ["
                << rotor.id << "].\n";
-      }
+      } 
 
       if (rotorSDF->HasElement("jointName"))
       {
@@ -634,6 +634,7 @@ void ArduCopterPlugin::ApplyMotorForces(const double _dt)
     double error = vel - velTarget;
     double force = this->dataPtr->rotors[i].pid.Update(error, _dt);
     this->dataPtr->rotors[i].joint->SetForce(0, force);
+    gzdbg << "Force applied : " << i << force << std::endl;
   }
 }
 
@@ -648,7 +649,7 @@ void ArduCopterPlugin::ReceiveMotorCommand()
   // on each call.
   // Once ArduCopter presence is detected, it takes this many
   // missed receives before declaring the FCS offline.
-
+  gzdbg << "I am here" << "\n";
   ServoPacket pkt;
   int waitMs = 1;
   if (this->dataPtr->arduCopterOnline)
@@ -724,13 +725,14 @@ void ArduCopterPlugin::ReceiveMotorCommand()
       this->dataPtr->connectionTimeoutCount = 0;
       this->dataPtr->arduCopterOnline = true;
     }
-
+     gzdbg << "before motors" << "\n";
     // compute command based on requested motorSpeed
     for (unsigned i = 0; i < this->dataPtr->rotors.size(); ++i)
-    {
+    { 
+      gzdbg << "in motors" << "\n";
       if (i < MAX_MOTORS)
       {
-        // std::cout << i << ": " << pkt.motorSpeed[i] << "\n";
+        gzdbg << i << ": " << pkt.motorSpeed[i] << "\n";
         this->dataPtr->rotors[i].cmd = this->dataPtr->rotors[i].maxRpm *
           pkt.motorSpeed[i];
       }

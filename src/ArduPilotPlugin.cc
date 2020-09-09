@@ -39,6 +39,7 @@
 #include <string>
 #include <vector>
 #include <sdf/sdf.hh>
+
 #include <ignition/math/Filter.hh>
 #include <gazebo/common/Assert.hh>
 #include <gazebo/common/Plugin.hh>
@@ -46,6 +47,21 @@
 #include <gazebo/sensors/sensors.hh>
 #include <gazebo/transport/transport.hh>
 #include "include/ArduPilotPlugin.hh"
+#include "ros/ros.h"
+#include "std_msgs/Float32.h"
+#include "std_msgs/String.h"
+
+#include <ros/advertise_options.h>
+#include <sensor_msgs/LaserScan.h>
+ 
+#include <ros/advertise_options.h>
+#include <sensor_msgs/LaserScan.h>
+
+
+#include <ignition/math.hh>
+
+#include "Float.pb.h"
+#include <geometry_msgs/Twist.h>
 
 #define MAX_MOTORS 255
 
@@ -423,6 +439,7 @@ class gazebo::ArduPilotPluginPrivate
   public: int connectionTimeoutMaxCount;
 
   public: double last_cmd = 150;
+
 };
 
 /////////////////////////////////////////////////
@@ -439,6 +456,8 @@ ArduPilotPlugin::~ArduPilotPlugin()
 }
 
 /////////////////////////////////////////////////
+
+
 void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
   GZ_ASSERT(_model, "ArduPilotPlugin _model pointer is null");
@@ -446,6 +465,16 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   this->dataPtr->model = _model;
   this->dataPtr->modelName = this->dataPtr->model->GetName();
+  
+  // code here
+
+  
+  this->_demo_pub = this->_nh.advertise<geometry_msgs::Twist>("cmd_vel",1);
+  
+  gzdbg << "Motion Publisher Initialized" << std::endl;
+  
+  // end here
+  
 
   // modelXYZToAirplaneXForwardZDown brings us from gazebo model frame:
   // x-forward, y-left, z-up
@@ -925,6 +954,8 @@ void ArduPilotPlugin::OnUpdate()
     }
   }
 
+  
+
   this->dataPtr->lastControllerUpdateTime = curTime;
 }
 
@@ -972,23 +1003,42 @@ bool ArduPilotPlugin::InitArduPilotSockets(sdf::ElementPtr _sdf) const
   return true;
 }
 
+
+
 /////////////////////////////////////////////////
+
+
+
+
 void ArduPilotPlugin::ApplyMotorForces(const double _dt)
-{
+{  
+  double twist_values[4];
+  //gzdbg << "apply motors forces" << "\n";
   // update velocity PID for controls and apply force to joint
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
-  {
+  { 
     if (this->dataPtr->controls[i].useForce)
     {
       if (this->dataPtr->controls[i].type == "VELOCITY")
       {
         const double velTarget = this->dataPtr->controls[i].cmd /
-          this->dataPtr->controls[i].rotorVelocitySlowdownSim;
+        this->dataPtr->controls[i].rotorVelocitySlowdownSim;
+
+        if(velTarget!=0)
+          {twist_values[i] = (velTarget-50)/50;}
+      
+
         const double vel = this->dataPtr->controls[i].joint->GetVelocity(0);
+        //twist_values[i] = vel;
         const double error = vel - velTarget;
-        const double force = this->dataPtr->controls[i].pid.Update(error, _dt);
+        double force = this->dataPtr->controls[i].pid.Update(error, _dt);
+        //force = force * 10000;
         this->dataPtr->controls[i].joint->SetForce(0, force);
+        //gzdbg << "Force applied : " << i << force << std::endl;
+        //gzdbg << "Published value is : " << float_value << std::endl;
+        
       }
+
       else if (this->dataPtr->controls[i].type == "POSITION")
       {
         /*const double upper_Lim = this->dataPtr->controls[i].joint->GetUpperLimit(0).Radian();
@@ -1000,11 +1050,13 @@ void ArduPilotPlugin::ApplyMotorForces(const double _dt)
         const double error = pos - posTarget;
         const double force = this->dataPtr->controls[i].pid.Update(error, _dt);
         this->dataPtr->controls[i].joint->SetForce(0, force);
+        gzdbg << "Position applied : " << i << force << std::endl;
       }
       else if (this->dataPtr->controls[i].type == "EFFORT")
       {
         const double force = this->dataPtr->controls[i].cmd;
         this->dataPtr->controls[i].joint->SetForce(0, force);
+        gzdbg << "EFFORT applied : " << i << force << std::endl;
       }
       else
       {
@@ -1016,6 +1068,7 @@ void ArduPilotPlugin::ApplyMotorForces(const double _dt)
       if (this->dataPtr->controls[i].type == "VELOCITY")
       {
         this->dataPtr->controls[i].joint->SetVelocity(0, this->dataPtr->controls[i].cmd);
+
       }
       else if (this->dataPtr->controls[i].type == "POSITION")
       {
@@ -1031,6 +1084,16 @@ void ArduPilotPlugin::ApplyMotorForces(const double _dt)
         // do nothing
       }
     }
+    // publish values here
+
+        this->_twist_data.linear.y = twist_values[0];
+        this->_twist_data.linear.z = twist_values[1];
+        this->_twist_data.angular.x = twist_values[2];
+        this->_twist_data.angular.y = twist_values[3];
+  
+        this->_twist_data.linear.x = (twist_values[0]+twist_values[1]+twist_values[2]+twist_values[3])/2; //scale down linear vel
+        this->_twist_data.angular.z = (-twist_values[0]+twist_values[1]-twist_values[2]+twist_values[3]);
+        this->_demo_pub.publish(this->_twist_data);
   }
 }
 

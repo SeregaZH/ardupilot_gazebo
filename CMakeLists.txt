@@ -9,6 +9,7 @@ project(ardupilot_sitl_gazebo)
 #######################
 
 find_package(gazebo REQUIRED)
+find_package(catkin REQUIRED COMPONENTS gazebo_plugins gazebo_ros roscpp std_msgs)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 if("${GAZEBO_VERSION}" VERSION_LESS "7.0")
@@ -25,21 +26,29 @@ include_directories(
         ${PROJECT_SOURCE_DIR}
         include
         ${GAZEBO_INCLUDE_DIRS}
+        ${catkin_INCLUDE_DIRS}
+	{CMAKE_CURRENT_BINARY_DIR}/msgs
         )
 
 link_libraries(
         ${CMAKE_CURRENT_BINARY_DIR}
         ${GAZEBO_LIBRARIES}
+	${PROTOBUF_LIBRARY}
+ 	${catkin_INCLUDE_DIRS}
         )
 
 link_directories(
         ${GAZEBO_LIBRARY_DIRS}
+	${CMAKE_CURRENT_BINARY_DIR}/msgs
         )
+# code here
+add_subdirectory(msgs)
+# end here 
 
 set (plugins_single_header
         ArduPilotPlugin
         # ArduCopterIRLockPlugin
-				ArduCopterPlugin
+	ArduCopterPlugin
         GimbalSmall2dPlugin
 	# WindPlugin
         )
@@ -47,8 +56,8 @@ set (plugins_single_header
 # add_library(ArduCopterIRLockPlugin SHARED src/ArduCopterIRLockPlugin.cc)
 # target_link_libraries(ArduCopterIRLockPlugin ${GAZEBO_LIBRARIES})
 
-add_library(ArduPilotPlugin SHARED src/ArduPilotPlugin.cc)
-target_link_libraries(ArduPilotPlugin ${GAZEBO_LIBRARIES})
+add_library(ArduPilotPlugin SHARED src/ArduPilotPlugin.cc src/Float.pb.cc)
+target_link_libraries(ArduPilotPlugin my_msgs ${PROTOBUF_LIBRARY} ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES})
 
 add_library(ArduCopterPlugin SHARED src/ArduCopterPlugin.cc)
 target_link_libraries(ArduCopterPlugin ${GAZEBO_LIBRARIES})
