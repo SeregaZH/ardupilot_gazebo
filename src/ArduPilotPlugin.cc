@@ -297,11 +297,13 @@ class gazebo::ArduPilotSocketPrivate
   /// \return True on success.
   public : bool Connect(const char *_address, const uint16_t _port)
   {
+    gzmsg << "Initiate connection to " << _address << "\n";
     struct sockaddr_in sockaddr;
     this->MakeSockAddr(_address, _port, sockaddr);
 
     if (connect(this->fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) != 0)
     {
+      gzerr << "Connection to " << _address << "failed due to unexpected error\n";
       shutdown(this->fd, 0);
       #ifdef _WIN32
       closesocket(this->fd);
@@ -332,6 +334,29 @@ class gazebo::ArduPilotSocketPrivate
   public: void MakeSockAddr(const char *_address, const uint16_t _port,
     struct sockaddr_in &_sockaddr)
   {
+    const char* resolved_address = _address;
+    struct addrinfo hint = {0};
+    hint.ai_flags = AI_NUMERICHOST;
+    hint.ai_family = AF_UNSPEC;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_protocol = IPPROTO_TCP;
+
+    struct addrinfo *addrs = NULL;
+    int ret = getaddrinfo(_address, NULL, &hint, &addrs);
+    if (ret == EAI_NONAME)
+    {
+        hint.ai_flags = 0;
+        ret = getaddrinfo(_address, NULL, &hint, &addrs);
+    }
+
+    if(ret == 0) 
+    {
+        resolved_address = inet_ntoa(((sockaddr_in *) addrs -> ai_addr) -> sin_addr);
+    }
+
+    gzdbg << "Original socket address: " << _address << "\n" << "Resolved socket address:" << resolved_address << "\n";
+    gzmsg << "Original socket address: " << _address << "\n" << "Resolved socket address:" << resolved_address << "\n";
+
     memset(&_sockaddr, 0, sizeof(_sockaddr));
 
     #ifdef HAVE_SOCK_SIN_LEN
@@ -340,7 +365,7 @@ class gazebo::ArduPilotSocketPrivate
 
     _sockaddr.sin_port = htons(_port);
     _sockaddr.sin_family = AF_INET;
-    _sockaddr.sin_addr.s_addr = inet_addr(_address);
+    _sockaddr.sin_addr.s_addr = inet_addr(resolved_address);
   }
 
   public: ssize_t Send(const void *_buf, size_t _size)
@@ -460,6 +485,7 @@ ArduPilotPlugin::~ArduPilotPlugin()
 
 void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
+  gzmsg << "Load ArduPilotPlugin plugin \n";
   GZ_ASSERT(_model, "ArduPilotPlugin _model pointer is null");
   GZ_ASSERT(_sdf, "ArduPilotPlugin _sdf pointer is null");
 
@@ -990,6 +1016,13 @@ bool ArduPilotPlugin::InitArduPilotSockets(sdf::ElementPtr _sdf) const
           << ":" << this->dataPtr->fdm_port_in << " aborting plugin.\n";
     return false;
   }
+  else
+  {
+    gzmsg << "[" << this->dataPtr->modelName << "] "
+          << "success to bind with " << this->dataPtr->listen_addr
+          << ":" << this->dataPtr->fdm_port_in << " continue.\n"; 
+  }
+  
 
   if (!this->dataPtr->socket_out.Connect(this->dataPtr->fdm_addr.c_str(),
       this->dataPtr->fdm_port_out))
@@ -998,6 +1031,12 @@ bool ArduPilotPlugin::InitArduPilotSockets(sdf::ElementPtr _sdf) const
           << "failed to bind with " << this->dataPtr->fdm_addr
           << ":" << this->dataPtr->fdm_port_out << " aborting plugin.\n";
     return false;
+  }
+  else 
+  {
+    gzmsg << "[" << this->dataPtr->modelName << "] "
+          << "success to bind with " << this->dataPtr->fdm_addr
+          << ":" << this->dataPtr->fdm_port_out << " continue.\n";
   }
 
   return true;
