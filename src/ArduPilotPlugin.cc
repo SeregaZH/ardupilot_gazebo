@@ -495,7 +495,7 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   // code here
 
   
-  this->_demo_pub = this->_nh.advertise<geometry_msgs::Twist>("cmd_vel_gzapl",1);
+  this->_demo_pub = this->_nh.advertise<geometry_msgs::Twist>("cmd_vel",1);
   
   gzdbg << "Motion Publisher Initialized" << std::endl;
   
